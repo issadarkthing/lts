@@ -11,11 +11,14 @@ typedef struct stat Stat;
 
 typedef struct {
   char name[256];
-  __time_t mtime;
+  __time_t time;
 } FileData;
+
+typedef enum { mtime, atime, ctime } Stype;
 
 typedef struct {
   bool reversed;
+  Stype type;
 } Opts;
 
 Opts opts;
@@ -31,8 +34,9 @@ int comp(const void *elem1, const void *elem2)
     b = c;
   }
 
-  if (a.mtime > b.mtime) return 1;
-  if (a.mtime < b.mtime) return -1;
+  if (a.time > b.time) return 1;
+  if (a.time < b.time) return -1;
+
   return 0;
 }
 
@@ -42,6 +46,15 @@ int main(int argc, char **argv)
     switch(getopt(argc, argv, "rmac")) {
       case 'r':
         opts.reversed = true;
+        continue;
+      case 'm':
+        opts.type = mtime;
+        continue;
+      case 'a':
+        opts.type = atime;
+        continue;
+      case 'c':
+        opts.type = ctime;
         continue;
     }
 
@@ -75,10 +88,22 @@ int main(int argc, char **argv)
       Stat attr;
       stat(name, &attr);
 
-
       FileData file = { 
-        .mtime = attr.st_mtim.tv_sec, 
+        .time = attr.st_mtim.tv_sec, 
       };
+
+      switch (opts.type) {
+        case atime:
+          file.time = attr.st_atim.tv_sec;
+          break;
+        case mtime:
+          file.time = attr.st_mtim.tv_sec;
+          break;
+        case ctime:
+          file.time = attr.st_ctim.tv_sec;
+          break;
+      }
+
 
       strncpy(file.name, name, 256);
 
@@ -93,4 +118,6 @@ int main(int argc, char **argv)
   for (int i = 0; i < length; i++) {
     printf("%s\n", files[i].name);
   }
+
+  free(files);
 }
